@@ -1,4 +1,8 @@
 import numpy as np
 import matplotlib as plt
-
-np.random.seed(42)
+import re
+import urllib.request
+import pandas as pd
+import yfinance as yf
+from bs4 import BeautifulSoup
+from scipy.stats import kurtosis
