@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import re
 import urllib.request
 import pandas as pd
@@ -121,8 +121,8 @@ axes[0].set_ylabel("Daily Returns")
 axes[0].grid(True, linestyle=':', alpha=0.6)
 axes[0].legend()
 
-axes[1].hist(returns_current, bins=100, density=True, alpha=0.5, color='1f77b4', label=f'Current Live State (Kurtosis: {kurt_current:.2f})')
-axes[1].hist(returns_future, bins=100, density=True, alpha=0.5, color='d62728', label=f'Predicted 95% AI Saturation (Kurtosis: {kurt_future:.2f})')
+axes[1].hist(returns_current, bins=100, density=True, alpha=0.5, color='#1f77b4', label=f'Current Live State (Kurtosis: {kurt_current:.2f})')
+axes[1].hist(returns_future, bins=100, density=True, alpha=0.5, color='#d62728', label=f'Predicted 95% AI Saturation (Kurtosis: {kurt_future:.2f})')
 axes[1].set_yscale('log')
 axes[1].set_title("Predicted Return Distribution (Log Scale - Tail Risk Focus)")
 axes[1].set_xlabel("Daily Return")
