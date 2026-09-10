@@ -113,3 +113,22 @@ print("=============================================================")
 
 print("\n4/4 Render: Generating dynamic output charts...")
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+axes[0].plot(log_returns, color='#1f77b4', alpha=0.6, label='SPY Real Log Returns')
+axes[0].set_title(f"Programmatically Ingested Market Data (10-Year SPY Returns)")
+axes[0].set_xlabel("Trading Days")
+axes[0].set_ylabel("Daily Returns")
+axes[0].grid(True, linestyle=':', alpha=0.6)
+axes[0].legend()
+
+axes[1].hist(returns_current, bins=100, density=True, alpha=0.5, color='1f77b4', label=f'Current Live State (Kurtosis: {kurt_current:.2f})')
+axes[1].hist(returns_future, bins=100, density=True, alpha=0.5, color='d62728', label=f'Predicted 95% AI Saturation (Kurtosis: {kurt_future:.2f})')
+axes[1].set_yscale('log')
+axes[1].set_title("Predicted Return Distribution (Log Scale - Tail Risk Focus)")
+axes[1].set_xlabel("Daily Return")
+axes[1].set_ylabel("Probability Density")
+axes[1].legend()
+axes[1].grid(True, linestyle=':', alpha=0.6)
+
+plt.tight_layout()
+plt.show()
