@@ -103,6 +103,7 @@ kurt_future = kurtosis(returns_future, fisher=True)
 var_99_current = np.percentile(returns_current, 1.0)
 var_99_future = np.percentile(returns_future, 1.0)
 
+print("=============================================================")
 print("         AUTONOMOUS MONTE CARLO PREDICTION OUTPUT:           ")
 print("=============================================================")
 print(f"{'Regime State':<28} | {'Excess Kurtosis':<18} | {'Daily 99% VaR (Tail Risk)':<20}")
