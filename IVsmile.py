@@ -29,13 +29,22 @@ for exp in expirations:
     all_maturity.extend(repeated_maturity)
     all_IV.extend(current_IV)
 
+    for i in range(len(calls)):
+        K_val = calls['strike'].iloc[i]
+        IV_val = calls['impliedVolatility'].iloc[i]
+        if 700 <= K_val <= 800 and 0.1 <= IV_val <= 1.0:
+            all_K.append(K_val)
+            all_maturity.append(maturity_frac)
+            all_IV.append(IV_val)
+
+
 x = all_K
 y = all_maturity
 z = all_IV
 
 plt.figure()
 ax = plt.axes(projection='3d')
-ax.plot_trisurf(x, y, z, cmap='viridis', edgecolor='none')
+ax.plot_trisurf(x, y, z, cmap='viridis', edgecolor='none', alpha=0.9)
 ax.set_xlabel('Strike Price')
 ax.set_ylabel('Time to Maturity (Years)')
 ax.set_zlabel('Implied Volatility')
