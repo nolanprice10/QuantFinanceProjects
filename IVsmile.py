@@ -35,7 +35,7 @@ z = all_IV
 
 plt.figure()
 ax = plt.axes(projection='3d')
-ax.scatter(x, y, z)
+ax.plot_trisurf(x, y, z, cmap='viridis', edgecolor='none')
 ax.set_xlabel('Strike Price')
 ax.set_ylabel('Time to Maturity (Years)')
 ax.set_zlabel('Implied Volatility')
