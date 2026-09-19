@@ -21,7 +21,7 @@ all_IV = []
 for exp in expirations:
     expiry_date = datetime.strptime(exp, "%Y-%m-%d").date()
     days_to_maturity = (expiry_date - today).days
-    if days_to_maturity < 7:
+    if days_to_maturity < 14:
         continue
     maturity_frac = days_to_maturity / 365.0
 
@@ -29,7 +29,7 @@ for exp in expirations:
     calls = chain.calls[chain.calls['strike'] >= current_price]
     puts = chain.puts[chain.puts['strike'] <= current_price]
     min_K = current_price * 0.6
-    max_K = current_price * 1.3
+    max_K = current_price * 1.15
     valid_calls = calls[(calls['strike'] <= max_K) & (calls['volume'] > 5) & (calls['impliedVolatility'] > 0.05) & (calls['impliedVolatility'] < 1.0)]
     valid_puts = puts[(puts['strike'] >= min_K) & (puts['volume'] > 5) & (puts['impliedVolatility'] > 0.05) & (puts['impliedVolatility'] < 1.0)]
     valid_options = pd.concat([valid_calls, valid_puts])
