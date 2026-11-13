@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 ticker = yf.Ticker("SPY")
-data = ticker.history(interval="15m", period="60d")
+data = ticker.history(start="2024-01-01", end="2026-01-01")
 
 sumPV = np.sum(data['Close'] * data['Volume'])
 sumV = np.sum(data['Volume'])
@@ -51,5 +51,23 @@ vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
 print(f"GEX: {GEX}")
 print(f"VIX: {vix}")
 
+data["marketReturn"] = data["Close"].pct_change()
 
+data["VWAP"] = (data["Close"] * data["Volume"]).cumsum() / data["Volume"].cumsum()
+data["GEX"] = gammaValue * OI * 100 * (data["Close"]**2) * 0.01
+data["VIX"] = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
 
+data["Signal"] = 0
+data.loc[(data["Close"] > data["VWAP"]) & (data["GEX"] > 0) & (data["VIX"] < 15), "Signal"] = 1
+data.loc[(data["Close"] < data["VWAP"]) & (data["GEX"] > 0) & (data["VIX"] < 15), "Signal"] = -1
+data.loc[(data["Close"] == data["VWAP"]) | (data["GEX"] <=0) | (data["VIX"] > 15), "Signal"] = 0
+
+data["strategySignal"] = data["Signal"].shift(1)
+data["strategyReturn"] = data["marketReturn"] * data["strategySignal"]
+data["marketCumulative"] = (1 + data["marketReturn"].fillna(0)).cumprod()
+data["strategyCumulative"] = (1 + data["strategyReturn"].fillna(0)).cumprod()
+
+print(f"Total Market Return: {(data['marketCumulative'].iloc[-1] - 1)*100:.2f}")
+print(
+    f"Total Strategy Return: {(data['strategyCumulative'].iloc[-1] - 1)*100:.2f}%"
+)
