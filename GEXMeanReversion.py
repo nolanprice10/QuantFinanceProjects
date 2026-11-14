@@ -47,9 +47,9 @@ OI = calls['openInterest'].values
 
 GEX = gammaValue * OI * 100 * (S**2) * 0.01
 
-vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
+vix = yf.Ticker("^VIX").history(period="1d")['Close'].values
 print(f"GEX: {GEX}")
-print(f"VIX: {vix}")
+print(f"VIX: {vix[-1]}")
 
 data["marketReturn"] = data["Close"].pct_change()
 
