@@ -3,9 +3,19 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
+import os
+from alpaca.trading.client import TradingClient
+from alpaca.trading.requests import MarketOrderRequest
+from alpaca.trading.enums import OrderSide, TimeInForce
+
+API_KEY = "PKWSO3J44J5XNRV4N2B7LISHCN"
+API_SECRET = "ZPfES9YxHZuQHFMm15wo2Wc69Ks9rd5mtCwzj8ECCDH"
+client = TradingClient(API_KEY, API_SECRET, paper=True)
+print("Connected to Alpaca account:")
+account = client.get_account()
 
 ticker = yf.Ticker("SPY")
-data = ticker.history(start="2024-01-01", end="2026-01-01")
+data = ticker.history(period="5d")
 
 sumPV = np.sum(data['Close'] * data['Volume'])
 sumV = np.sum(data['Volume'])
@@ -13,43 +23,43 @@ vwap = sumPV/sumV
 
 S = data['Close'].iloc[-1]
 expirations = ticker.options[0]
-chain = ticker.option_chain(expirations)
-calls = chain.calls
-puts = chain.puts
+if expirations: 
+    chain = ticker.option_chain(expirations[0])
+    calls = chain.calls
 
-def gamma(S, K, T, r, sigma):
-    from scipy.stats import norm
-    if T <= 0 or sigma <= 0:
-        return 0
-    d1 = (np.log(S/K) + (r+0.5*(sigma**2))*T)/(sigma*np.sqrt(T))
-    gamma = (norm.pdf(d1))/(S*sigma*np.sqrt(T))
-    return gamma
 
-now = datetime.now()
-secPerYear = 365*24*60*60
-for expK in ticker.options:
-    expDate = datetime.strptime(f"{expK} 16:00:00", "%Y-%m-%d %H:%M:%S")
+    def gamma(S, K, T, r, sigma):
+        from scipy.stats import norm
+        if T <= 0 or sigma <= 0:
+            return 0
+        d1 = (np.log(S/K) + (r+0.5*(sigma**2))*T)/(sigma*np.sqrt(T))
+        gamma = (norm.pdf(d1))/(S*sigma*np.sqrt(T))
+        return gamma
+
+    now = datetime.now()
+    secPerYear = 365*24*60*60
+
+    expDate = datetime.strptime(f"{expirations[0]} 16:00:00", "%Y-%m-%d %H:%M:%S")
     secLeft = max((expDate - now).total_seconds(), 60)
     T = secLeft/secPerYear
 
-def riskRate():
-    irx = yf.Ticker("^IRX")
-    rate = (irx.history(period="1d")['Close'].iloc[-1])/100.0
-    return rate
-r = riskRate()
+    try:
+        irx = yf.Ticker("^IRX")
+        r = (irx.history(period="1d")['Close'].iloc[-1])/100.0
+    except:
+        r = 0.04
 
-K = calls['strike'].values
+    K = calls['strike'].iloc[-1]
+    sigma = calls['impliedVolatility'].iloc[-1]
+    gammaValue = gamma(S, K, T, r, sigma)
+    OI = calls['openInterest'].iloc[-1]
+    GEX = gammaValue * OI * 100 * (S**2) * 0.01
+else:
+    GEX =0
 
-sigma = calls['impliedVolatility'].values
-
-gammaValue = gamma(S, K.values, T, r, sigma.values)
-OI = calls['openInterest'].values
-
-GEX = gammaValue * OI * 100 * (S**2) * 0.01
-
-vix = yf.Ticker("^VIX").history(period="1d")['Close'].values
+vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
 print(f"GEX: {GEX}")
-print(f"VIX: {vix[-1]}")
+print(f"VIX: {vix}")
 
 data["marketReturn"] = data["Close"].pct_change()
 
