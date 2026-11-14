@@ -22,9 +22,10 @@ sumV = np.sum(data['Volume'])
 vwap = sumPV/sumV
 
 S = data['Close'].iloc[-1]
-expirations = ticker.options[0]
-if expirations: 
-    chain = ticker.option_chain(expirations[0])
+expirations = ticker.options
+if expirations:
+    nearestExp = expirations[0] 
+    chain = ticker.option_chain(nearestExp)
     calls = chain.calls
 
 
@@ -39,7 +40,7 @@ if expirations:
     now = datetime.now()
     secPerYear = 365*24*60*60
 
-    expDate = datetime.strptime(f"{expirations[0]} 16:00:00", "%Y-%m-%d %H:%M:%S")
+    expDate = datetime.strptime(f"{nearestExp} 16:00:00", "%Y-%m-%d %H:%M:%S")
     secLeft = max((expDate - now).total_seconds(), 60)
     T = secLeft/secPerYear
 
