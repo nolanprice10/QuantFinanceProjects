@@ -1,4 +1,4 @@
-# Quantitative Market Microstructure & Merton Jump-Diffusion Simulation Engine (Script 1)
+# Quantitative Market Microstructure & Merton Jump-Diffusion Simulation Engine
 
 This document details the exact data sources, ingestion protocols, parameter assumptions, and mathematical formulations implemented in **Script 1** (Real-time NLP-augmented Merton Jump-Diffusion Monte Carlo simulation).
 
