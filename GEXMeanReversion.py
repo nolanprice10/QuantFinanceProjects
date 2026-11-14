@@ -14,7 +14,8 @@ client = TradingClient(API_KEY, API_SECRET, paper=True)
 print("Connected to Alpaca account:")
 account = client.get_account()
 
-ticker = yf.Ticker("SPY")
+stock = "SPY"
+ticker = yf.Ticker(stock)
 data = ticker.history(period="5d")
 
 sumPV = np.sum(data['Close'] * data['Volume'])
@@ -60,11 +61,13 @@ else:
 
 vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
 print(f"Price: {S} | VWAP: {vwap} | GEX: {GEX} | VIX: {vix}")
+volatility = data['Close'].pct_change().std()
+Z = (S - vwap)/volatility
 
 signal = 0
-if S > vwap and GEX > 0 and vix < 15:
+if Z > 0 and GEX > 0 and vix < 15:
     signal = 1
-elif S < vwap and GEX > 0 and vix < 15:
+elif Z < 0 and GEX > 0 and vix < 15:
     signal = -1
 else:
     signal = 0
@@ -83,21 +86,37 @@ except:
     hasPosition = False
     print("No existing position")
 
-if signal == 1 and not hasPosition:
+if signal == 0 and hasPosition:
+    client.close_position("SPY")
+    print("Position closed")
+    hasPosition = False
+    positionSide = None
+
+elif signal == -1 and not hasPosition:
     print("Condition met: Going long")
     orderData = MarketOrderRequest(
-        symbol="SPY",
+        symbol=stock,
         qty=10,
         side=OrderSide.BUY,
         time_in_force=TimeInForce.DAY
     )
     marketOrder = client.submit_order(orderData)
     print(f"Submitted market order: {marketOrder} (ID: {marketOrder.id})")
+    hasPosition = True
+    positionSide = "long"
 
-elif signal == -1 and hasPosition and positionSide == "long":
-    print("Condition met: Closing position")
-    client.close_position("SPY")
-    print("Position closed")
+elif signal == 1 and not hasPosition:
+    print ("Condition met: Going short")
+    orderData = MarketOrderRequest(
+        symbol=stock,
+        qty=10,
+        side=OrderSide.SELL,
+        time_in_force=TimeInForce.DAY
+    )
+    marketOrder = client.submit_order(orderData)
+    print(f"Submitted market order: {marketOrder} (ID: {marketOrder.id})")
+    hasPosition = True
+    positionSide = "short"
 
 else:
     print("No action taken")
