@@ -38,12 +38,12 @@ def riskRate():
     return rate
 r = riskRate()
 
-K = calls['strike'].iloc[-1]
+K = calls['strike'].values
 
-sigma = calls['impliedVolatility'].iloc[-1]
+sigma = calls['impliedVolatility'].values
 
-gammaValue = gamma(S, K, T, r, sigma)
-OI = calls['openInterest'].iloc[-1]
+gammaValue = gamma(S, K.values, T, r, sigma.values)
+OI = calls['openInterest'].values
 
 GEX = gammaValue * OI * 100 * (S**2) * 0.01
 
