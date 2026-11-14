@@ -69,3 +69,34 @@ else:
     signal = 0
 
 print(f"Signal: {signal}")
+
+try:
+    existingPosition = client.get_position("SPY")
+    hasPosition = True
+    positionSide = existingPosition.side
+    print(
+        f"Current position: {positionSide} of {existingPosition.qty}"
+        " shares"
+    )
+except:
+    hasPosition = False
+    print("No existing position")
+
+if signal == 1 and not hasPosition:
+    print("Condition met: Going long")
+    orderData = MarketOrderRequest(
+        symbol="SPY",
+        qty=10,
+        side=OrderSide.BUY,
+        time_in_force=TimeInForce.DAY
+    )
+    marketOrder = client.submit_order(orderData)
+    print(f"Submitted market order: {marketOrder} (ID: {marketOrder.id})")
+
+elif signal == -1 and hasPosition and positionSide == "long":
+    print("Condition met: Closing position")
+    client.close_position("SPY")
+    print("Position closed")
+
+else:
+    print("No action taken")
