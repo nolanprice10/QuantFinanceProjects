@@ -59,3 +59,13 @@ else:
 
 vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
 print(f"Price: {S} | VWAP: {vwap} | GEX: {GEX} | VIX: {vix}")
+
+signal = 0
+if S > vwap and GEX > 0 and vix < 15:
+    signal = 1
+elif S < vwap and GEX > 0 and vix < 15:
+    signal = -1
+else:
+    signal = 0
+
+print(f"Signal: {signal}")
