@@ -61,10 +61,10 @@ else:
 
 vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
 print(f"Price: {S} | VWAP: {vwap} | GEX: {GEX} | VIX: {vix}")
-volatility = data['Close'].pct_change().std()
-Z = (S - vwap)/volatility
+fiveDayVol = data['Close'].pct_change().dropna().tail(5).std() * np.sqrt(252)
+Z = (S - vwap)/fiveDayVol
 
-signal = 0
+signal = 0                              # Signal initialization; 0 means no action, 1 means short, -1 means long
 if Z > 0 and GEX > 0 and vix < 15:
     signal = 1
 elif Z < 0 and GEX > 0 and vix < 15:
@@ -74,7 +74,7 @@ else:
 
 print(f"Signal: {signal}")
 
-try:
+try:                                    # Trading algorithm execution through Alpaca API
     existingPosition = client.get_position("SPY")
     hasPosition = True
     positionSide = existingPosition.side
