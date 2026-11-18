@@ -14,113 +14,114 @@ client = TradingClient(API_KEY, API_SECRET, paper=True)
 print("Connected to Alpaca account:")
 account = client.get_account()
 
-stock = "SPY"
-ticker = yf.Ticker(stock)
-data = ticker.history(period="30d")
-print("Here is your data frame:")
-print(data)
-data = data.dropna(subset=["Close"])
+stockList = ["SPY", "VOO", "IVV", "RSP", "XLF", "XLI"]
+for stock in stockList:
+    ticker = yf.Ticker(stock)
+    data = ticker.history(period="30d")
+    print(f"Here is your data frame for {stock}:")
+    print(data)
+    data = data.dropna(subset=["Close"])
 
-sumPV = np.sum(data['Close'] * data['Volume'])
-sumV = np.sum(data['Volume'])
-vwap = sumPV/sumV
+    sumPV = np.sum(data['Close'] * data['Volume'])
+    sumV = np.sum(data['Volume'])
+    vwap = sumPV/sumV
 
-S = data['Close'].iloc[-1]
-expirations = ticker.options
-if expirations:
-    nearestExp = expirations[0] 
-    chain = ticker.option_chain(nearestExp)
-    calls = chain.calls
+    S = data['Close'].iloc[-1]
+    expirations = ticker.options
+    if expirations:
+        nearestExp = expirations[0] 
+        chain = ticker.option_chain(nearestExp)
+        calls = chain.calls
 
 
-    def gamma(S, K, T, r, sigma):
-        from scipy.stats import norm
-        if T <= 0 or sigma <= 0:
-            return 0
-        d1 = (np.log(S/K) + (r+0.5*(sigma**2))*T)/(sigma*np.sqrt(T))
-        gamma = (norm.pdf(d1))/(S*sigma*np.sqrt(T))
-        return gamma
+        def gamma(S, K, T, r, sigma):
+            from scipy.stats import norm
+            if T <= 0 or sigma <= 0:
+                return 0
+            d1 = (np.log(S/K) + (r+0.5*(sigma**2))*T)/(sigma*np.sqrt(T))
+            gamma = (norm.pdf(d1))/(S*sigma*np.sqrt(T))
+            return gamma
 
-    now = datetime.now()
-    secPerYear = 365*24*60*60
+        now = datetime.now()
+        secPerYear = 365*24*60*60
 
-    expDate = datetime.strptime(f"{nearestExp} 16:00:00", "%Y-%m-%d %H:%M:%S")
-    secLeft = max((expDate - now).total_seconds(), 60)
-    T = secLeft/secPerYear
+        expDate = datetime.strptime(f"{nearestExp} 16:00:00", "%Y-%m-%d %H:%M:%S")
+        secLeft = max((expDate - now).total_seconds(), 60)
+        T = secLeft/secPerYear
 
-    try:
-        irx = yf.Ticker("^IRX")
-        r = (irx.history(period="1d")['Close'].iloc[-1])/100.0
+        try:
+            irx = yf.Ticker("^IRX")
+            r = (irx.history(period="1d")['Close'].iloc[-1])/100.0
+        except:
+            r = 0.04
+
+        atm_index = (calls['strike'] - S).abs().idxmin()
+        K = calls['strike'].loc[atm_index]
+        sigma = calls['impliedVolatility'].loc[atm_index]
+        gammaValue = gamma(S, K, T, r, sigma)
+        OI = calls['openInterest'].loc[atm_index]
+        GEX = gammaValue * OI * 100 * (S**2) * 0.01
+    else:
+        GEX =0
+
+    vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
+    print(f"For {stock}\n====================\nPrice: {S} | VWAP: {vwap} | GEX: {GEX} | VIX: {vix}")
+    fiveDayVol = data['Close'].pct_change().dropna().tail(5).std() * np.sqrt(252)
+    Z = (S - vwap)/fiveDayVol
+
+    signal = 0                              # Signal initialization; 0 means no action, 1 means short, -1 means long
+    if Z > 0 and GEX > 0 and (vix < 15 or vix > 30):
+        signal = 1
+    elif Z < 0 and GEX > 0 and (vix < 15 or vix > 30):
+        signal = -1
+    else:
+        signal = 0
+
+    print(f"Signal: {signal}")
+
+    try:                                    # Trading algorithm execution through Alpaca API
+        existingPosition = client.get_position(stock)
+        hasPosition = True
+        positionSide = existingPosition.side
+        print(
+            f"Current position: {positionSide} of {existingPosition.qty}"
+            " shares"
+        )
     except:
-        r = 0.04
+        hasPosition = False
+        print("No existing position")
 
-    atm_index = (calls['strike'] - S).abs().idxmin()
-    K = calls['strike'].loc[atm_index]
-    sigma = calls['impliedVolatility'].loc[atm_index]
-    gammaValue = gamma(S, K, T, r, sigma)
-    OI = calls['openInterest'].loc[atm_index]
-    GEX = gammaValue * OI * 100 * (S**2) * 0.01
-else:
-    GEX =0
+    if signal == 0 and hasPosition:
+        client.close_position(stock)
+        print("Position closed")
+        hasPosition = False
+        positionSide = None
 
-vix = yf.Ticker("^VIX").history(period="1d")['Close'].iloc[-1]
-print(f"Price: {S} | VWAP: {vwap} | GEX: {GEX} | VIX: {vix}")
-fiveDayVol = data['Close'].pct_change().dropna().tail(5).std() * np.sqrt(252)
-Z = (S - vwap)/fiveDayVol
+    elif signal == -1 and not hasPosition:
+        print("Condition met: Going long")
+        orderData = MarketOrderRequest(
+            symbol=stock,
+            qty=10,
+            side=OrderSide.BUY,
+            time_in_force=TimeInForce.DAY
+        )
+        marketOrder = client.submit_order(orderData)
+        print(f"Submitted market order: {marketOrder} (ID: {marketOrder.id})")
+        hasPosition = True
+        positionSide = "long"
 
-signal = 0                              # Signal initialization; 0 means no action, 1 means short, -1 means long
-if Z > 0 and GEX > 0 and (vix < 15 or vix > 30):
-    signal = 1
-elif Z < 0 and GEX > 0 and (vix < 15 or vix > 30):
-    signal = -1
-else:
-    signal = 0
+    elif signal == 1 and not hasPosition:
+        print ("Condition met: Going short")
+        orderData = MarketOrderRequest(
+            symbol=stock,
+            qty=10,
+            side=OrderSide.SELL,
+            time_in_force=TimeInForce.DAY
+        )
+        marketOrder = client.submit_order(orderData)
+        print(f"Submitted market order for {stock}: {marketOrder} (ID: {marketOrder.id})")
+        hasPosition = True
+        positionSide = "short"
 
-print(f"Signal: {signal}")
-
-try:                                    # Trading algorithm execution through Alpaca API
-    existingPosition = client.get_position(stock)
-    hasPosition = True
-    positionSide = existingPosition.side
-    print(
-        f"Current position: {positionSide} of {existingPosition.qty}"
-        " shares"
-    )
-except:
-    hasPosition = False
-    print("No existing position")
-
-if signal == 0 and hasPosition:
-    client.close_position(stock)
-    print("Position closed")
-    hasPosition = False
-    positionSide = None
-
-elif signal == -1 and not hasPosition:
-    print("Condition met: Going long")
-    orderData = MarketOrderRequest(
-        symbol=stock,
-        qty=10,
-        side=OrderSide.BUY,
-        time_in_force=TimeInForce.DAY
-    )
-    marketOrder = client.submit_order(orderData)
-    print(f"Submitted market order: {marketOrder} (ID: {marketOrder.id})")
-    hasPosition = True
-    positionSide = "long"
-
-elif signal == 1 and not hasPosition:
-    print ("Condition met: Going short")
-    orderData = MarketOrderRequest(
-        symbol=stock,
-        qty=10,
-        side=OrderSide.SELL,
-        time_in_force=TimeInForce.DAY
-    )
-    marketOrder = client.submit_order(orderData)
-    print(f"Submitted market order: {marketOrder} (ID: {marketOrder.id})")
-    hasPosition = True
-    positionSide = "short"
-
-else:
-    print("No action taken")
+    else:
+        print("No action taken")
