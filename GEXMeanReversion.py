@@ -31,8 +31,7 @@ else:
     for stock in stockList:
         ticker = yf.Ticker(stock)
         data = ticker.history(period="30d")
-        print(f"Here is your data frame for {bold}{blue}{stock}{reset}:")
-        print(data)
+        print(f"Checking data for {bold}{blue}{stock}{reset}")
         data = data.dropna(subset=["Close"])
 
         sumPV = np.sum(data['Close'] * data['Volume'])
@@ -118,6 +117,7 @@ else:
                 side=OrderSide.BUY,
                 time_in_force=TimeInForce.DAY
             )
+            client.submit_order(orderData)
             marketOrder = client.submit_order(orderData)
             print(f"Submitted market order for {green}{stock}{reset}: {marketOrder} (ID: {marketOrder.id})")
             hasPosition = True
@@ -139,3 +139,28 @@ else:
         else:
             print("No action taken")
         print(f"End of iteration for {blue}{stock}{reset}\n====================\n")
+
+
+per = "1mo"
+stockTick = "SPY"
+spyTick = yf.Ticker(stockTick)
+spyData = spyTick.history(period=per)
+spyVWAP = (spyData['Close'] * spyData['Volume']).cumsum() / spyData['Volume'].cumsum()
+vixTick = yf.Ticker("^VIX")
+vixData = vixTick.history(period=per)
+
+fig, ax1 = plt.subplots(figsize=(10, 6))
+ax1.plot(spyData.index, spyData['Close'], label="SPY Close", color="black")
+ax1.plot(spyVWAP.index, spyVWAP, label="SPY VWAP", color="blue", linestyle="--")
+ax1.set_title(f"{stockTick} and VWAP Analysis")
+ax1.set_xlabel("Date")
+ax1.set_ylabel("Price")
+ax1.legend()
+
+fig, ax2 = plt.subplots(figsize=(10, 6))
+ax2.plot(vixData.index, vixData['Close'], label="VIX Close", color="red")
+ax2.set_title("VIX Analysis")
+ax2.set_xlabel("Date")
+ax2.set_ylabel("Price")
+ax2.legend()
+plt.show()
