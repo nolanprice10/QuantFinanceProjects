@@ -16,7 +16,10 @@ account = client.get_account()
 
 stock = "SPY"
 ticker = yf.Ticker(stock)
-data = ticker.history(period="5d")
+data = ticker.history(period="30d")
+print("Here is your data frame:")
+print(data)
+data = data.dropna(subset=["Close"])
 
 sumPV = np.sum(data['Close'] * data['Volume'])
 sumV = np.sum(data['Volume'])
@@ -51,10 +54,11 @@ if expirations:
     except:
         r = 0.04
 
-    K = calls['strike'].iloc[-1]
-    sigma = calls['impliedVolatility'].iloc[-1]
+    atm_index = (calls['strike'] - S).abs().idxmin()
+    K = calls['strike'].loc[atm_index]
+    sigma = calls['impliedVolatility'].loc[atm_index]
     gammaValue = gamma(S, K, T, r, sigma)
-    OI = calls['openInterest'].iloc[-1]
+    OI = calls['openInterest'].loc[atm_index]
     GEX = gammaValue * OI * 100 * (S**2) * 0.01
 else:
     GEX =0
@@ -65,9 +69,9 @@ fiveDayVol = data['Close'].pct_change().dropna().tail(5).std() * np.sqrt(252)
 Z = (S - vwap)/fiveDayVol
 
 signal = 0                              # Signal initialization; 0 means no action, 1 means short, -1 means long
-if Z > 0 and GEX > 0 and vix < 15:
+if Z > 0 and GEX > 0 and (vix < 15 or vix > 30):
     signal = 1
-elif Z < 0 and GEX > 0 and vix < 15:
+elif Z < 0 and GEX > 0 and (vix < 15 or vix > 30):
     signal = -1
 else:
     signal = 0
@@ -75,7 +79,7 @@ else:
 print(f"Signal: {signal}")
 
 try:                                    # Trading algorithm execution through Alpaca API
-    existingPosition = client.get_position("SPY")
+    existingPosition = client.get_position(stock)
     hasPosition = True
     positionSide = existingPosition.side
     print(
@@ -87,7 +91,7 @@ except:
     print("No existing position")
 
 if signal == 0 and hasPosition:
-    client.close_position("SPY")
+    client.close_position(stock)
     print("Position closed")
     hasPosition = False
     positionSide = None
